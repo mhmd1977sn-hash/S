@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a"><title>محمد AI</title>
+<style>
+:root{--g:#d4af37;--g2:#f3d77a;--bg:#0a0a0a;--c:#161616;--b:#2c2c2c;--t:#f4efe0;--m:#9a9484}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--t);font-family:-apple-system,"Segoe UI",Tahoma,sans-serif}
+body{display:flex;flex-direction:column;height:100dvh;padding-top:env(safe-area-inset-top)}
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--g);background:#000}
+header h1{margin:0;font-size:20px;color:var(--g);flex:1}
+.logo{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--g2),var(--g));color:#000;display:grid;place-items:center;font-weight:900}
+#status{min-height:24px;padding:3px 14px;font-size:13px;color:var(--g2);display:flex;align-items:center;gap:8px}
+#status i{width:8px;height:8px;border-radius:50%;background:var(--g);animation:p 1s infinite}
+@keyframes p{50%{opacity:.2}}
+main{flex:1;min-height:0;position:relative}
+.pg{position:absolute;inset:0;overflow-y:auto;padding:12px 14px;display:none;-webkit-overflow-scrolling:touch}
+.pg.on{display:block}
+.m{max-width:88%;margin:8px 0;padding:10px 13px;border-radius:16px;line-height:1.7;white-space:pre-wrap;word-break:break-word;font-size:16px}
+.m.u{background:linear-gradient(135deg,var(--g2),var(--g));color:#000;margin-inline-start:auto;border-end-start-radius:4px}
+.m.b{background:var(--c);border:1px solid var(--b);border-end-end-radius:4px}
+.m a{color:var(--g2);font-size:13px;display:block;margin-top:6px}
+form,.bar{display:flex;gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom)) ;background:#000;border-top:1px solid var(--b);align-items:center}
+#in{flex:1;min-width:0;font-size:16px;padding:12px 14px;border-radius:22px;border:1px solid var(--g);background:var(--c);color:var(--t);outline:0}
+button{font-family:inherit;cursor:pointer}
+.ib{width:44px;height:44px;border-radius:50%;border:1px solid var(--g);background:var(--c);color:var(--g);font-size:19px;flex:none}
+.ib.on{background:var(--g);color:#000}
+#go{background:var(--g);color:#000;font-weight:700}
+nav{display:flex;background:#000;border-top:1px solid var(--g);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:11px 2px;background:none;border:0;color:var(--m);font-size:13px}
+nav button.on{color:var(--g);font-weight:700}
+.card{background:var(--c);border:1px solid var(--b);border-radius:12px;padding:11px;margin:9px 0;line-height:1.7;font-size:15px}
+.card h4{margin:0 0 4px;color:var(--g2)}
+.tag{display:inline-block;font-size:12px;padding:1px 9px;border-radius:10px;margin-inline-end:5px;border:1px solid}
+.c{color:#6fd66f}.p{color:var(--g)}.u{color:#e86b6b}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.btn{padding:8px 13px;border-radius:10px;border:1px solid var(--g);background:var(--c);color:var(--g);font-size:14px}
+.btn.d{border-color:#c44;color:#e86b6b}
+h3{color:var(--g);margin:14px 0 4px}
+small,.mu{color:var(--m)}
+#toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%);background:var(--g);color:#000;padding:9px 16px;border-radius:20px;font-size:14px;display:none;z-index:9;max-width:90%}
+</style></head><body>
+<header><div class="logo">م</div><h1>محمد AI</h1>
+<button class="ib" id="spk" title="قراءة الإجابات بالصوت">🔇</button></header>
+<div id="status"></div>
+<main>
+<section class="pg on" id="p-chat"></section>
+<section class="pg" id="p-mem"></section>
+<section class="pg" id="p-learn"></section>
+<section class="pg" id="p-src"></section>
+</main>
+<form id="f"><button type="button" class="ib on" id="web" title="البحث في الإنترنت">🌐</button>
+<input id="in" placeholder="اكتب لمحمد..." autocomplete="off" enterkeyhint="send">
+<button type="button" class="ib" id="mic" title="تحدث">🎤</button>
+<button type="submit" class="ib" id="go">➤</button></form>
+<nav><button data-p="chat" class="on">💬 المحادثة</button><button data-p="mem">🧠 الذاكرة</button><button data-p="learn">📚 تعلّمته</button><button data-p="src">🔗 المصادر</button></nav>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const el=(t,p={},...c)=>{const e=document.createElement(t);for(const k in p){if(k==='on')for(const v in p.on)e.addEventListener(v,p.on[v]);else if(k==='className')e.className=p[k];else if(k in e)e[k]=p[k];else e.setAttribute(k,p[k])}c.flat().filter(x=>x!=null&&x!==false).forEach(x=>e.append(x));return e};
+const S={msgs:[],facts:[],prefs:{name:'',notes:[]},web:true,speak:false,topic:'',sid:Date.now()};
+let db,busy=false,rec=null;
+/* ---------- التخزين: IndexedDB مع بديل LocalStorage ---------- */
+const kv={
+ open(){return new Promise(r=>{try{const q=indexedDB.open('mohamed_ai',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>{db=q.result;r()};q.onerror=()=>r()}catch(e){r()}})},
+ get(k){return new Promise(r=>{if(!db){try{r(JSON.parse(localStorage.getItem('mai_'+k)))}catch(e){r(null)}return}const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})},
+ set(k,v){return new Promise(r=>{if(!db){try{localStorage.setItem('mai_'+k,JSON.stringify(v))}catch(e){}r();return}try{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>r();t.onerror=()=>r()}catch(e){r()}})}
+};
+const save=()=>Promise.all([kv.set('msgs',S.msgs.slice(-300)),kv.set('facts',S.facts),kv.set('prefs',S.prefs)]);
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display='none',3500)}
+function setStatus(t){$('#status').replaceChildren(...(t?[el('i'),t]:[]))}
+const fd=t=>new Date(t).toLocaleDateString('ar-LY',{year:'numeric',month:'short',day:'numeric'});
+/* ---------- معالجة النص العربي ---------- */
+const norm=s=>(s||'').toLowerCase().replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[^\p{L}\p{N}\s]/gu,' ');
+const STOP=new Set('ما ماذا من في علي عن الي هو هي هل كيف لماذا شن شنو شنهو شنهي ايش وين متي ان كان هذا هذه ذلك تلك مع او و يا لي لك انا انت اللي كيفاش علاش ليش قولي اخبرني احكي لي عليا بالله ممكن the a an is of to in and what who how tell me about'.split(' '));
+const words=s=>norm(s).split(/\s+/).filter(w=>w.length>1&&!STOP.has(w));
+const toks=s=>words(s).map(w=>w.replace(/^(وال|بال|لل|ال)/,''));
+const nums=s=>(s.match(/\d+/g)||[]);
+/* ---------- المعلومات: مؤكدة / محتملة / غير موثوقة ---------- */
+const CL={c:'مؤكدة',p:'محتملة',u:'غير موثوقة'};
+function conf(f){let b=f.base;if(f.corr&&b!=='c')b=b==='u'?'p':'c';return b}
+function addFact(o){
+ let f=S.facts.find(x=>x.url&&x.url===o.url&&x.title===o.title&&x.src===o.src);
+ if(f){if(f.text!==o.text){f.text=o.text;f.note='حُدّثت بتاريخ '+fd(Date.now())}f.date=Date.now()}
+ else{f={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),date:Date.now(),base:o.src==='user'?'c':/wikipedia/.test(o.src)?'p':'u',...o};S.facts.push(f)}
+ const ft=new Set(toks(f.title+' '+f.text));
+ for(const g of S.facts){if(g===f||g.src===f.src)continue;
+  const gt=toks(g.title+' '+g.text),sim=gt.filter(w=>ft.has(w)).length/Math.max(1,Math.min(ft.size,gt.length));
+  if(sim>.5){const a=nums(f.text),b=nums(g.text);
+   if(a.length&&b.length&&!a.some(n=>b.includes(n))){f.conflict=g.id;g.conflict=f.id}else{f.corr=g.id;g.corr=f.id}}}
+ return f}
+function rank(q){const qt=toks(q);if(!qt.length)return[];
+ return S.facts.map(f=>{const ft=new Set(toks(f.title+' '+f.text));return{f,s:qt.filter(w=>ft.has(w)).length/qt.length}}).filter(x=>x.s>=.6).sort((a,b)=>b.s-a.s)}
+/* ---------- الشبكة (مجانية، بدون مفاتيح) ---------- */
+async function jf(u,txt){const c=new AbortController(),t=setTimeout(()=>c.abort(),15000);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);return txt?await r.text():await r.json()}finally{clearTimeout(t)}}
+async function wiki(q,lang){
+ const j=await jf(`https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrlimit=3&prop=extracts|info&exintro=1&explaintext=1&exsentences=4&inprop=url`);
+ return Object.values(j.query?.pages||{}).sort((a,b)=>a.index-b.index).map(p=>({title:p.title,text:(p.extract||'').trim(),url:p.fullurl,src:lang+'.wikipedia.org'})).filter(x=>x.text)}
+async function webLearn(q){
+ const w=words(q).join(' ')||q;
+ setStatus('🔎 أبحث في ويكيبيديا العربية...');let r=await wiki(w,'ar').catch(()=>[]);
+ if(!r.length){setStatus('🔎 أبحث في ويكيبيديا الإنجليزية...');r=await wiki(q,'en').catch(()=>[])}
+ setStatus('🧠 أتعلم وأحفظ في الذاكرة...');
+ return r.slice(0,2).map(x=>addFact(x))}
+async function pageLearn(url){
+ setStatus('📄 أقرأ الصفحة...');
+ const t=await jf('https://r.jina.ai/'+url,true);
+ const title=(t.match(/Title:\s*(.+)/)||[])[1]||url;
+ const body=(t.split('Markdown Content:')[1]||t).replace(/!?\[[^\]]*\]\([^)]*\)/g,'').replace(/[#*>_`]/g,'').replace(/\s+/g,' ').trim();
+ if(body.length<40)throw new Error('لم أجد نصاً في الصفحة');
+ setStatus('🧠 أتعلم وأحفظ في الذاكرة...');
+ let host='web';try{host=new URL(url).hostname}catch(e){}
+ return addFact({title:title.slice(0,120),text:body.slice(0,900),url,src:host})}
+async function ytLearn(url){
+ setStatus('▶️ أقرأ بيانات الفيديو...');
+ let j;try{j=await jf('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent(url))}catch(e){j=await jf('https://noembed.com/embed?url='+encodeURIComponent(url))}
+ if(!j||!j.title)throw new Error('تعذّر جلب بيانات الفيديو');
+ setStatus('🧠 أتعلم وأحفظ في الذاكرة...');
+ return addFact({title:j.title,text:`فيديو على يوتيوب بعنوان «${j.title}» من قناة ${j.author_name||'غير معروفة'}.`,url,src:'youtube.com'})}
+async function review(){
+ const old=S.facts.filter(f=>/wikipedia/.test(f.src)&&Date.now()-f.date>7*864e5);
+ if(!old.length)return toast('لا توجد معلومات من ويكيبيديا أقدم من 7 أيام');
+ let n=0;busy=true;
+ for(const f of old){setStatus('🔄 أراجع: '+f.title);const r=await wiki(f.title,f.src.slice(0,2)).catch(()=>[]);const x=r.find(y=>y.title===f.title);
+  if(x){const was=f.text;addFact(x);if(was!==f.text)n++}}
+ busy=false;setStatus('');await save();toast(`راجعت ${old.length} معلومة، تحدّثت ${n}`);render('learn')}
+/* ---------- الحوار ---------- */
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const nm=()=>S.prefs.name?' يا '+S.prefs.name:' يا خوي';
+function ans(f,pre){return{text:(pre?pre+'\n\n':'')+f.text+`\n\n[${CL[conf(f)]}${f.conflict?' · ⚠ تعارض مع معلومة أخرى عندي':''}]`,srcs:f.url?[{url:f.url,title:f.src}]:[]}}
+async function respond(t){
+ const n=norm(t).trim();let m;
+ if(m=t.match(/https?:\/\/\S+/)){const u=m[0];
+  try{const f=/youtu\.?be/.test(u)?await ytLearn(u):await pageLearn(u);S.topic=f.title;return{...ans(f,'قريت الرابط وحفظته:'),text:ans(f,'قريت الرابط وحفظت منه:').text+(/youtu\.?be/.test(u)?'\n\n(ملاحظة: أقدر آخذ العنوان والقناة فقط؛ النص المفرّغ غير متاح بدون خادم.)':'')}}
+  catch(e){return{text:'ما قدرت نقرا الرابط: '+e.message+'\n(بعض المواقع تمنع القراءة من المتصفح.)'}}}
+ if(m=n.match(/^(تذكر|احفظ|سجل)\s+(ان\s+)?(.+)/)){const raw=t.replace(/^\S+\s+(أن|ان)?\s*/,'');const f=addFact({title:raw.slice(0,40),text:raw,url:'',src:'user'});S.topic=f.title;return{text:`تمام${nm()}، حفظتها وبتكون عندي مؤكدة لأنك إنت قلتها.`}}
+ if(m=n.match(/^(انسي|انسى|احذف|امسح)\s+(.+)/)){const r=rank(m[2]);if(!r.length)return{text:'ما لقيت شي بهالمعنى في ذاكرتي.'};S.facts=S.facts.filter(f=>f!==r[0].f);return{text:`نسيت: «${r[0].f.title}».`}}
+ if(m=t.match(/(?:اسمي|إسمي|انا اسمي)\s+(\S+)/)){S.prefs.name=m[1];return{text:`أهلا ${m[1]}! تشرفنا، وبعد توا ننادي عليك بإسمك.`}}
+ if(/^(انا\s+)?(افضل|احب|نحب|ما احب|ما نحب|لا احب)\s+/.test(n)){S.prefs.notes.push(t);return{text:'سجلتها في تفضيلاتك وبنراعيها.'}}
+ if(/^(سلام|السلام|مرحبا|اهلا|هلا|صباح|مساء|كيفك|كيف حالك|شلونك|شن اخبارك|اخبارك|شخبارك)/.test(n))return{text:pick(['أهلا وسهلا'+nm()+'! شن أخبارك؟ شن نقدر نخدمك فيه؟','يا هلا'+nm()+'، الحمد لله بخير. قولي شن في بالك؟','مرحبا بيك'+nm()+'! تفضل، أنا محمد وجاهز.'])};
+ if(/(من انت|شن اسمك|شنو اسمك|اسمك|عرف بنفسك)/.test(n))return{text:'أنا محمد، مساعدك الشخصي. نتذكر محادثاتنا، ونبحث في ويكيبيديا ونقرا الروابط اللي تعطيني إياها، ونحفظ اللي نتعلمه مع مصدره وتاريخه. أنا لست نموذجاً لغوياً ضخماً، فإجاباتي تعتمد على ما حفظته وما أجده في البحث.'};
+ if(/^(شكرا|يعطيك|تسلم|مشكور)/.test(n))return{text:'العفو'+nm()+'، في الخدمة دايماً.'};
+ let q=t;if(words(t).length<2&&S.topic&&!/(سلام|شكرا)/.test(n))q=t+' '+S.topic;
+ const r=rank(q);
+ if(r.length){S.topic=r[0].f.title;return ans(r[0].f,'من اللي حفظته عندي:')}
+ if(!S.web)return{text:'ما عندي معلومة عن هذا في ذاكرتي. فعّل زر 🌐 باش نبحث لك في الإنترنت، أو علّمني بكتابة: «تذكر أن ...»'};
+ let fs;try{fs=await webLearn(q)}catch(e){return{text:'ما قدرت أوصل للإنترنت: '+e.message}}
+ if(!fs.length)return{text:'بحثت وما لقيت نتيجة واضحة. جرّب صياغة ثانية أو أعطني رابط صفحة نقراها.'};
+ S.topic=fs[0].title;const a=ans(fs[0],'ما كانت عندي، فبحثت وتعلمتها توا:');
+ if(fs[1])a.srcs.push({url:fs[1].url,title:'مقال ذو صلة: '+fs[1].title});return a}
+function bubble(m){const d=el('div',{className:'m '+(m.role==='u'?'u':'b')},m.text);(m.srcs||[]).forEach(s=>d.append(el('a',{href:s.url,target:'_blank',rel:'noopener'},'🔗 '+s.title)));return d}
+function add(m){m.t=Date.now();m.sid=S.sid;S.msgs.push(m);const c=$('#p-chat');c.append(bubble(m));c.scrollTop=c.scrollHeight}
+async function send(){
+ const t=$('#in').value.trim();if(!t||busy)return;$('#in').value='';busy=true;add({role:'u',text:t});
+ let r;try{r=await respond(t)}catch(e){r={text:'حصل خلل: '+e.message}}
+ add({role:'b',...r});busy=false;setStatus('');save();if(S.speak)say(r.text)}
+/* ---------- الصوت ---------- */
+function unlock(){try{speechSynthesis.speak(new SpeechSynthesisUtterance(''))}catch(e){}}
+function say(t){if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t.replace(/\[.*?\]/g,'').slice(0,500));u.lang='ar-SA';const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.startsWith('ar'));if(v)u.voice=v;speechSynthesis.speak(u)}
+function mic(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!R)return toast('متصفحك لا يدعم التعرف على الصوت. استخدم Safari (iOS 14.5+) أو Chrome.');
+ if(rec){rec.stop();return}rec=new R();rec.lang='ar-SA';rec.interimResults=true;
+ rec.onresult=e=>{$('#in').value=[...e.results].map(r=>r[0].transcript).join('');if(e.results[e.results.length-1].isFinal)send()};
+ rec.onend=()=>{rec=null;$('#mic').classList.remove('on')};rec.onerror=e=>toast('خطأ الميكروفون: '+e.error+' (تأكد من السماح بالميكروفون والإملاء)');
+ $('#mic').classList.add('on');try{rec.start()}catch(e){rec=null}}
+/* ---------- الصفحات ---------- */
+const cb=f=>{const c=conf(f);return el('span',{className:'tag '+c},CL[c])};
+function editFact(f){const t=prompt('عدّل المعلومة:',f.text);if(t&&t.trim()){f.text=t.trim();f.date=Date.now();f.note='عُدّلت يدوياً';save();render('learn')}}
+function render(p){
+ if(p==='mem'){const e=$('#p-mem'),cur=S.msgs.filter(m=>m.sid===S.sid).slice(-12);
+  e.replaceChildren(el('h3',{},'الذاكرة القصيرة (المحادثة الحالية)'),el('div',{className:'card mu'},cur.length?`آخر ${cur.length} رسالة من هذه الجلسة، يستخدمها محمد لفهم السياق. الموضوع الحالي: ${S.topic||'—'}`:'لا رسائل بعد.'),
+   el('h3',{},'الذاكرة الطويلة'),el('div',{className:'card'},`${S.facts.length} معلومة · ${S.msgs.length} رسالة محفوظة`),
+   el('h3',{},'تفضيلاتي'),el('div',{className:'card'},'الاسم: '+(S.prefs.name||'غير محدد'),el('div',{className:'row'},el('button',{className:'btn',on:{click(){const v=prompt('اسمك:',S.prefs.name);if(v!==null){S.prefs.name=v.trim();save();render('mem')}}}},'تعديل الاسم'))),
+   ...S.prefs.notes.map((n,i)=>el('div',{className:'card'},n,el('div',{className:'row'},el('button',{className:'btn',on:{click(){const v=prompt('عدّل:',n);if(v){S.prefs.notes[i]=v;save();render('mem')}}}},'تعديل'),el('button',{className:'btn d',on:{click(){S.prefs.notes.splice(i,1);save();render('mem')}}},'حذف')))),
+   el('button',{className:'btn',on:{click(){const v=prompt('أضف تفضيلاً:');if(v){S.prefs.notes.push(v);save();render('mem')}}}},'＋ تفضيل'),
+   el('h3',{},'النسخ والمسح'),el('div',{className:'row'},
+    el('button',{className:'btn',on:{click:exp}},'⬇️ تصدير'),
+    el('button',{className:'btn',on:{click(){$('#imp').click()}}},'⬆️ استيراد'),
+    el('button',{className:'btn d',on:{click(){if(confirm('مسح كل الذاكرة نهائياً؟')){S.msgs=[];S.facts=[];S.prefs={name:'',notes:[]};S.topic='';save();$('#p-chat').replaceChildren();render('mem');toast('تم مسح الذاكرة')}}}},'🗑 مسح الذاكرة')),
+   el('input',{type:'file',id:'imp',accept:'.json',style:'display:none',onchange(ev){imp(ev.target.files[0])}}))}
+ if(p==='learn'){const e=$('#p-learn');
+  e.replaceChildren(el('div',{className:'row'},el('button',{className:'btn',on:{click(){const v=prompt('اكتب معلومة تريد أن يحفظها محمد:');if(v){addFact({title:v.slice(0,40),text:v,url:'',src:'user'});save();render('learn')}}}},'＋ معلومة'),el('button',{className:'btn',on:{click(){if(!busy)review()}}},'🔄 مراجعة القديم')),
+   el('div',{className:'mu'},'مؤكدة = قلتها أنت أو تطابقت مصدران مختلفان · محتملة = من مصدر مرجعي واحد · غير موثوقة = صفحة ويب عامة'),
+   ...(S.facts.length?[...S.facts].reverse().map(f=>el('div',{className:'card'},el('h4',{},f.title),f.text.length>420?f.text.slice(0,420)+'…':f.text,el('div',{},cb(f),f.conflict&&el('span',{className:'tag u'},'⚠ تعارض'),el('small',{},fd(f.date)+' · '+(f.src==='user'?'من عندك':f.src)+(f.note?' · '+f.note:''))),
+     el('div',{className:'row'},el('button',{className:'btn',on:{click(){editFact(f)}}},'تعديل'),el('button',{className:'btn d',on:{click(){S.facts=S.facts.filter(x=>x!==f);save();render('learn')}}},'حذف')))):[el('div',{className:'card mu'},'لم يتعلم محمد شيئاً بعد. اسأله سؤالاً وفعّل 🌐')]))}
+ if(p==='src'){const g={};S.facts.filter(f=>f.url).forEach(f=>{(g[f.url]=g[f.url]||{f,n:0}).n++;if(f.date>g[f.url].f.date)g[f.url].f=f});
+  const l=Object.values(g);$('#p-src').replaceChildren(...(l.length?l.sort((a,b)=>b.f.date-a.f.date).map(({f})=>el('div',{className:'card'},el('h4',{},f.title),el('a',{href:f.url,target:'_blank',rel:'noopener',style:'color:var(--g2);word-break:break-all'},f.url),el('div',{},cb(f),el('small',{},f.src+' · '+fd(f.date))))):[el('div',{className:'card mu'},'لا توجد مصادر بعد.')]))}}
+function exp(){const b=new Blob([JSON.stringify({v:1,facts:S.facts,prefs:S.prefs,msgs:S.msgs},null,1)],{type:'application/json'});const a=el('a',{href:URL.createObjectURL(b),download:'mohamed_ai_memory.json'});document.body.append(a);a.click();a.remove();toast('تم تجهيز ملف التصدير')}
+async function imp(file){if(!file)return;try{const j=JSON.parse(await file.text());if(!Array.isArray(j.facts))throw 0;
+ const ids=new Set(S.facts.map(f=>f.id));j.facts.forEach(f=>{if(!ids.has(f.id))S.facts.push(f)});S.prefs=j.prefs||S.prefs;if(Array.isArray(j.msgs)&&!S.msgs.length)S.msgs=j.msgs;await save();toast('تم الاستيراد');render('mem')}catch(e){toast('ملف غير صالح')}}
+/* ---------- التشغيل ---------- */
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.pg').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#p-'+b.dataset.p).classList.add('on');render(b.dataset.p)});
+$('#f').onsubmit=e=>{e.preventDefault();unlock();send()};
+$('#mic').onclick=()=>{unlock();mic()};
+$('#web').onclick=function(){S.web=!S.web;this.classList.toggle('on',S.web);toast(S.web?'البحث في الإنترنت: مفعّل':'البحث في الإنترنت: متوقف')};
+$('#spk').onclick=function(){unlock();S.speak=!S.speak;this.textContent=S.speak?'🔊':'🔇';if(!S.speak)speechSynthesis.cancel()};
+(async()=>{await kv.open();
+ const [m,f,p]=await Promise.all([kv.get('msgs'),kv.get('facts'),kv.get('prefs')]);
+ if(Array.isArray(m))S.msgs=m;if(Array.isArray(f))S.facts=f;if(p)S.prefs={name:'',notes:[],...p};
+ const c=$('#p-chat');S.msgs.slice(-40).forEach(x=>c.append(bubble(x)));
+ if(!S.msgs.length)add({role:'b',text:'أهلا وسهلا! أنا محمد 👋\nنتذكر محادثاتنا ونتعلم من الإنترنت. اسألني أي سؤال، أو اكتب «تذكر أن ...» باش نحفظ معلومة، أو الصق رابط صفحة أو فيديو يوتيوب.'});
+ c.scrollTop=c.scrollHeight;if(!db)toast('تنبيه: التخزين الدائم محدود في هذا الوضع، افتح الملف عبر رابط https')})();
+</script></body></html>
